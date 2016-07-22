@@ -1,0 +1,9 @@
+{
+    "require": {
+        "robmorgan/phinx": "*",
+        "components/jquery": "1.9.*",
+        "thobbs/phpcassa": "dev-master",
+        "evseevnn/php-cassandra-binary": "dev-master",
+        "videlalvaro/php-amqplib": "^2.5"
+    }
+}

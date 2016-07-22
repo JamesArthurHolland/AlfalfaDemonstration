@@ -1,0 +1,10 @@
+-e user
+-n AE
+-k id
+protected String forename;
+protected String surname;
+protected String dateOfBirth;
+protected String mobileNo;
+protected String emailAddress;
+protected long dateJoined;
+protected long lastUpdateTime;

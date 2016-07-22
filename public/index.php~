@@ -1,0 +1,431 @@
+<?php
+
+require_once('../application/library/asa-stdlib/DiTrait.php');
+require_once('../application/library/asa-stdlib/EntityTrait.php');
+require_once('../application/library/asa-stdlib/FilterTrait.php');
+require_once('../application/library/asa-stdlib/FilterMapperAbstract.php');
+require_once('../application/library/asa-stdlib/ServiceAbstract.php');
+require_once('../application/library/asa-stdlib/StorageInterface.php');
+require_once('../application/library/asa-stdlib/MapperInterface.php');
+require_once('../application/library/asa-stdlib/MysqlDbAbstract.php');
+require_once('../application/library/asa-stdlib/CassandraDbAbstract.php');
+
+require_once('../application/library/asa-uuid/UUIDService.php');
+require_once('../application/library/asa-uuid/UUIDDb.php');
+
+require_once('../application/library/asa-shift/ShiftEntity.php');
+require_once('../application/library/asa-shift/ShiftService.php');
+require_once('../application/library/asa-shift/ShiftDb.php');
+require_once('../application/library/asa-shift/ShiftMapper.php');
+
+require_once('../application/library/asa-company/CompanyEntity.php');
+require_once('../application/library/asa-company/CompanyService.php');
+require_once('../application/library/asa-company/CompanyDb.php');
+require_once('../application/library/asa-company/CompanyMapper.php');
+
+require_once('../application/library/asa-link/LinkEntity.php');
+require_once('../application/library/asa-link/LinkFilter.php');
+require_once('../application/library/asa-link/LinkService.php');
+require_once('../application/library/asa-link/LinkDb.php');
+require_once('../application/library/asa-link/LinkMapper.php');
+
+require_once('../application/library/asa-notification/NotificationEntity.php');
+require_once('../application/library/asa-notification/NotificationFilter.php');
+require_once('../application/library/asa-notification/NotificationService.php');
+require_once('../application/library/asa-notification/NotificationDb.php');
+require_once('../application/library/asa-notification/NotificationMapper.php');
+
+require_once('../application/library/asa-user/UserEntity.php');
+require_once('../application/library/asa-user/UserFilter.php');
+require_once('../application/library/asa-user/UserMapper.php');
+require_once('../application/library/asa-user/UserService.php');
+require_once('../application/library/asa-user/UserDb.php');
+
+require_once('../application/library/asa-user/hasalt/HasaltEntity.php');
+require_once('../application/library/asa-user/hasalt/HasaltFilter.php');
+require_once('../application/library/asa-user/hasalt/HasaltMapper.php');
+require_once('../application/library/asa-user/hasalt/HasaltService.php');
+require_once('../application/library/asa-user/hasalt/HasaltDb.php');
+
+require_once('../application/library/asa-session/SessionEntity.php');
+require_once('../application/library/asa-session/SessionMapper.php');
+require_once('../application/library/asa-session/SessionService.php');
+require_once('../application/library/asa-session/SessionDb.php');
+
+require_once('../application/library/asa-role/role/RoleEntity.php');
+require_once('../application/library/asa-role/role/RoleFilter.php');
+require_once('../application/library/asa-role/role/RoleMapper.php');
+require_once('../application/library/asa-role/role/RoleService.php');
+require_once('../application/library/asa-role/role/RoleDb.php');
+
+require_once('../application/library/asa-role/user-role/UserRoleEntity.php');
+require_once('../application/library/asa-role/user-role/UserRoleFilter.php');
+require_once('../application/library/asa-role/user-role/UserRoleMapper.php');
+require_once('../application/library/asa-role/user-role/UserRoleService.php');
+require_once('../application/library/asa-role/user-role/UserRoleDb.php');
+
+//require_once('../application/library/asa-chat/ChatService.php');
+
+require_once('../vendor/autoload.php');
+
+
+
+
+try {
+    $_SERVER['nodeNumber'] = 1;
+
+    error_reporting(E_ALL);
+
+    if (!isset($_GET['_url'])) {
+        $_GET['_url'] = '/';
+    }
+
+    ini_set('display_errors', 'On');
+    error_reporting(E_ALL);
+
+    //Register an autoloader
+    $loader = new \Phalcon\Loader();
+    $loader->registerDirs(array(
+        '../application/controllers/',
+        '../application/models/'
+    ));
+
+    $loader->registerNamespaces([
+        'phpcassa' => '/var/www/asa-services/vendor/thobbs/phpcassa/lib/phpcassa',
+        'evseevnn\Cassandra' => '/var/www/asa-services/vendor/evseevnn/php-cassandra-binary/src',
+        'ASA\Company' => '/var/www/asa-services/application/library/asa-company/',
+        'ASA\Hasalt' => '/var/www/asa-services/application/library/asa-user/Hasalt',
+        'ASA\Link' => '/var/www/asa-services/application/library/asa-link/',
+        'ASA\Migration' => '/var/www/asa-services/application/library/asa-migrations/',
+        'ASA\Shift' => '/var/www/asa-services/application/library/asa-shift/',
+        'ASA\Notification' => '/var/www/asa-services/application/library/asa-notification/',
+        'ASA\User' => '/var/www/asa-services/application/library/asa-user/',
+        'ASA\UUID' => '/var/www/asa-services/application/library/asa-uuid/',
+        'ASA\Token' => '/var/www/asa-services/application/library/asa-token/',
+        'ASA\Chat' => '/var/www/asa-services/application/library/asa-chat/',
+        'ASA\Chat\Message' => '/var/www/asa-services/application/library/asa-chat/message/',
+        'ASA\Chat\Conversation' => '/var/www/asa-services/application/library/asa-chat/conversation/',
+        'ASA\Chat\ConversationUser' => '/var/www/asa-services/application/library/asa-chat/conversation-user/',
+        'ASA\Chat\ReportMessage' => '/var/www/asa-services/application/library/asa-chat/report-message/',
+        'ASA\Chat\SaveMessage' => '/var/www/asa-services/application/library/asa-chat/save-message/'
+    ]);
+
+    $loader->register();
+
+    if (!empty($_SERVER['REQUEST_URI'])) {
+        $pathInfo = $_SERVER['REQUEST_URI'];
+    } else {
+        $pathInfo = '/';
+    }
+
+    $di = new Phalcon\DI\FactoryDefault();
+
+    $di->set('myName', function(){
+        return "jamie";
+    });
+
+
+    //Setup the view component
+    $di->set('view', function(){
+        $view = new \Phalcon\Mvc\View\Simple();
+        $view->setViewsDir('../application/views/');
+        return $view;
+    });
+
+    $di->set('url', function(){
+        $url = new Phalcon\Mvc\Url();
+        $url->setBaseUri('/');
+        return $url;
+    });
+
+
+//    $di->set('')
+
+    $di->set('router', function() {
+        $router = new \Phalcon\Mvc\Router();
+        $router->setUriSource('/');
+        $router->add(
+            '/signup',
+            array(
+                "controller" => "signup",
+                "action" => "signup"
+            )
+        );
+        $router->add(
+            '/signup/{token}',
+            array(
+                "controller" => "signup",
+                "action" => "signup"
+            )
+        );
+        $router->add(
+            '/signup/register',
+            array(
+                "controller" => "signup",
+                "action" => "register"
+            )
+        );
+        return $router;
+    });
+
+
+    if (!empty($_SERVER['REQUEST_URI'])) {
+        $pathInfo = $_SERVER['REQUEST_URI'];
+    } else {
+        $pathInfo = '/';
+    }
+
+
+
+    //      DEPENDENCY INJECTION
+
+    require_once(__DIR__ . '/../application/config/Di.php');
+
+
+    //Handle the request
+    $app = new \Phalcon\Mvc\Micro($di); //($di);
+
+
+    $app->get("/shifts2", function () use ($app)
+    {
+        $response = new \Phalcon\Http\Response();
+
+        try {
+            // Run query.
+
+            $shift = $app->getDi()->get('shiftService')->fetch(1);
+            var_dump($shift);
+            die("asdf");
+        } catch (Exception $e) {
+            echo $e;
+            echo $e->getTraceAsString();
+        }
+        $response->setStatusCode(200, "OK");
+        $response->setContentType('application/json');
+        $response->setContent('{
+            "Shifts": [
+                {
+                    "companyShiftId":"1",
+
+                }
+            ]
+        }');
+
+        return $response;
+    });
+
+    $app->get('/{endpoint}/{id:[0-9]+}', function ($endpoint, $id) use ($app) {
+        $service = $app->getDi()->get($endpoint . 'Service');
+        $entity = $service->fetch($id);
+
+        $response = new \Phalcon\Http\Response();
+        $response->setStatusCode(200, "OK");
+        $response->setContent($entity->jsonSerialize());
+
+        return $response;
+    });
+
+    $app->get('/session/{id}', function ($id) use ($app) {
+        $service = $app->getDi()->get('sessionService');
+        $entity = $service->fetch($id);
+
+        $response = new \Phalcon\Http\Response();
+
+        if($entity) {
+            $response->setStatusCode(200, "OK");
+            $response->setContent($entity->jsonSerialize());
+        }
+        else {
+            $response->setStatusCode(404, "Not found");
+            $response->setContent(null);
+        }
+
+        return $response;
+    });
+
+    $app->get("/uuid/{endpoint}", function ($endpoint) use ($app)
+    {
+            $id = $app->getDi()->get('uuidService')->generateUUID($endpoint);
+//            echo decbin($id);
+            var_dump($id);
+    });
+
+    $app->get("/shifts", function () use ($app)
+    {
+        $response = new \Phalcon\Http\Response();
+
+        try {
+
+//            $id = $app->getDi()->get('uuidService')->generateUUID("shift");
+//            die("decbin");
+
+            // Run query.
+            $shift = $app->getDi()->get('shiftService')->fetch(1);
+
+//            var_dump($shift);
+//            die("asdf");
+
+
+        } catch (Exception $e) {
+            echo $e;
+            echo $e->getTraceAsString();
+        }
+
+
+        $response->setStatusCode(200, "OK");
+        $response->setContentType('application/json');
+        $response->setContent($shift->jsonSerialize());
+
+        return $response;
+    });
+
+    $app->post('/ng/link/filter', function () use ($app) {
+        $linkService = $app->getDi()->get('linkService');
+        $postData = json_decode($app->request->getRawBody(), true);
+
+        $filter = $app->getDi()->get('linkFilterMapper')->fromArray($postData['filter']);
+        $collection = $linkService->fetchCollectionPaginationFilters($filter);
+
+
+        $links = [];
+        foreach($collection as $link) {
+            $company = $app->getDi()->get('companyService')->fetch($link->getCompanyId());
+//            $user = $app->getDi()->get('userService')->fetch($link->getUserId());
+            $links[$link->getId()] = [
+                'company' => $company->toArray()
+//                'user' => $user->toArray()
+            ];
+        }
+
+        $response = new \Phalcon\Http\Response();
+        $response->setStatusCode(200, "OK");
+        $response->setContent(json_encode($links));
+
+        return $response;
+    });
+
+    /**
+     * Fetches the directories for all the companies a user is linked to.
+     */
+    $app->get('/ng/directory/user/{id:[0-9]+}', function ($id) use ($app) {
+        $linkService = $app->getDi()->get('linkService');
+//        $postData = json_decode($app->request->getRawBody(), true);
+
+//        $filter = $app->getDi()->get('linkFilterMapper')->fromArray($postData['filter']);
+        $collection = $linkService->fetchCompaniesByUserId($id);
+
+        $companies = [];
+
+        foreach($collection as $link) {
+//            $company = $app->getDi()->get('linkService')->fetch($company->getCompanyId());
+            $companyId = $link->getCompanyId();
+            $users = $app->getDi()->get('linkService')->fetchStaffByCompanyId($companyId);
+//            foreach($users as $user)
+//            $usersJson =
+            $companies[$companyId] = $users;
+        }
+
+//        $app->getDi()->get('linkService')
+
+//        $app->getDi()->get('linkService')->fetch($link->getCompanyId());
+
+        $response = new \Phalcon\Http\Response();
+        $response->setStatusCode(200, "OK");
+        $response->setContent(json_encode($companies));
+
+        return $response;
+    });
+
+    $app->post('/hasalt/save', function () use ($app) {
+        $postData = json_decode($app->request->getRawBody(), true);
+        $salt = utf8_encode($app->getDi()->get('hasaltService')->generateSalt());
+        $hash = $app->getDi()->get('hasaltService')->generateHash($postData['password'], $salt);
+
+        $app->getDi()->get('hasaltService')->save($postData['userId'], $hash, $salt);
+
+        $response = new \Phalcon\Http\Response();
+        $response->setStatusCode(200, "OK");
+
+        return $response;
+    });
+
+    $app->post('/{endpoint}/filter', function ($endpoint) use ($app) {
+        $endpointService = $app->getDi()->get($endpoint . 'Service');
+        $postData = json_decode($app->request->getRawBody(), true);
+
+        $filter = $app->getDi()->get($endpoint . 'FilterMapper')->fromArray($postData['filter']);
+
+        $collection = $endpointService->fetchCollectionPaginationFilters($filter);
+
+
+
+        $jsonData = [];
+        foreach($collection as $item) {
+            $jsonData[] = $item->toArray();
+        }
+
+//        var_dump($collection);
+//        die("deead");
+
+        $response = new \Phalcon\Http\Response();
+        $response->setStatusCode(200, "OK");
+        $response->setContent(json_encode($collection));
+
+        return $response;
+    });
+
+    $app->post('/{endpoint}', function ($endpoint) use ($app) {
+        $endpointService = $app->getDi()->get($endpoint . 'Service');
+        $postData = json_decode($app->request->getRawBody(), true);
+        $entity = $app->getDi()->get($endpoint . 'Mapper')->fromArray($postData);
+        $savedEntity = $endpointService->save($entity);
+
+        $response = new \Phalcon\Http\Response();
+        $response->setStatusCode(200, "OK");
+        $response->setContent($savedEntity->jsonSerialize());
+
+        return $response;
+    });
+
+    $app->get('/ng/chat/{id}', function ($id) use ($app) {
+        $service = $app->getDi()->get('chatService');
+        $conversations = $service->fetchConversationsByUserId($id);
+
+        $chat = [];
+        foreach($conversations as $id => $convo) {
+            $id = (string) $id;
+            foreach($convo as $message) {
+                $chat[$id]['messages'][] = $message->toArray();
+            }
+            $participants = $service->fetchConversationParticipantsArray($id);
+            $chat[$id]['participants'] = $participants;
+        }
+//        var_dump(json_encode($chat));
+//        var_dump($chat);
+//die("daead");
+//        $chat = ['conversations' => $chat];
+
+        $response = new \Phalcon\Http\Response();
+        $response->setStatusCode(200, "OK");
+        $response->setContent(json_encode($chat));
+
+        return $response;
+    });
+
+    $app->notFound(function () use ($app) {
+        $app->response->setStatusCode(404, "Not Found")->sendHeaders();
+        echo 'This is crazy, but this page was not found!' . $_SERVER['REQUEST_URI'];
+    });
+
+    $app->handle();
+
+} catch(\Phalcon\Exception $e) {
+    echo "PhalconException: ", $e->getMessage();
+    echo "\n --- \n";
+    echo "PhalconException: ", $e->getTraceAsString();
+} catch(\Exception $e) {
+    echo $e->getMessage();
+    echo "\n --- \n";
+    echo $e->getTraceAsString();
+}
+
