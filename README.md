@@ -17,3 +17,4 @@ Alfalfa can be used with _ALMOST ANY LANGUAGE_, but in this example I'm demonstr
 
 ```cd ../ae-user && alfalfa```
 
+[![Alfalfa Demonstration](http://img.youtube.com/vi/3Z9RbDN4R1M/0.jpg)](https://youtu.be/3Z9RbDN4R1M "Alfalfa Demonstration")
